@@ -21,4 +21,19 @@ Storage requirements:
 2) photo file would be stores in s3 exposed via CDNs
 3) user profiling data (user name, bio, email, user posts) will be stored in documents in mongodb
 4) for nested comments neo4j will be used as it supports o(1) for insertion, update, deletion and fetch of comments wrt a post
-5) 
+
+Nested comments DB:
+1) possible operations are - 
+   a) commenting on a post, 
+   b) replying on a comment, 
+   c) editing a comment/reply, 
+   d) deleting a comment/reply, 
+   e) fetching comment/reply tree for a post in pagination
+2) Nested comments are a tree like structure in which a post is a root and all direct comments are its children and then from next level
+are replies to a comment
+3) we will be using postgres with closure table to store comment and reply subtree and recursively retrieve all data
+4) this db will be partitioned on post_id. also traffic on a post declines as it grows old so we can also add shards based on month
+5) now if a influencer with 100M followers posts then we cannot allow every write to directly hit the db to avoid it becoming prone to crash
+6) we can add kafka layer in between which will have a post_id topic with a retention policy of 2 days.
+7) all the comment write traffic for a post will go to kafka and consyumers will add the data to db which will be in the controlled env.
+8) so kafka becomes a rate limiter for our postgres cluster which can never crash
